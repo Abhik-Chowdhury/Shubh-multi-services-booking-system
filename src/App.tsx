@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import logo from "./assets/shubh-transparent-logo.png";
-import footerLogo from "./assets/shubh-v.2.png";
 import { 
   ShieldCheck, 
   Settings, 
@@ -121,7 +119,7 @@ export default function App() {
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
                 <img 
-                  src={logo}
+                  src="https://res.cloudinary.com/dvfxrdr5m/image/upload/v1768046165/invoice-gen/easvxmwbkyirwlmtwsfh.png"
                   alt={Constants.STORE_NAME} 
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
@@ -507,7 +505,7 @@ export default function App() {
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
                   <img 
-                    src={footerLogo}
+                    src="https://res.cloudinary.com/dvfxrdr5m/image/upload/v1773480348/invoice-gen/shubh-v.2_h2migk.png"
                     alt={Constants.STORE_NAME} 
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
