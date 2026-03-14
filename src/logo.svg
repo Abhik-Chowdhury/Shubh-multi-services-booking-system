@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <!-- Outer water drop -->
+  <path d="M50 10 C50 10 20 45 20 65 C20 81.568 33.431 95 50 95 C66.568 95 80 81.568 80 65 C80 45 50 10 50 10 Z" fill="#2563EB"/>
+  <!-- Inner water drop for reflection/depth -->
+  <path d="M50 25 C50 25 32 52 32 65 C32 74.941 40.059 83 50 83 C59.941 83 68 74.941 68 65 C68 52 50 25 50 25 Z" fill="#60A5FA"/>
+  <!-- Highlights -->
+  <path d="M40 55 Q 35 65 42 75" fill="none" stroke="#EFF6FF" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+  <circle cx="60" cy="70" r="4" fill="#EFF6FF" opacity="0.9"/>
+</svg>

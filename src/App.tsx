@@ -19,6 +19,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from './supabase';
 import * as Constants from './constants';
+import headerLogo from './logo.svg';
+import footerLogo from './logo.svg';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -118,9 +120,9 @@ export default function App() {
           <div className="flex justify-between items-center h-16 sm:h-20">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
-                <img 
-                  src="./src/shubh-transparent-logo.png" 
-                  alt={Constants.STORE_NAME} 
+                <img
+                  src={headerLogo}
+                  alt={Constants.STORE_NAME}
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
                 />
@@ -504,9 +506,9 @@ export default function App() {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
-                  <img 
-                    src="./src/shubh-v.2.png" 
-                    alt={Constants.STORE_NAME} 
+                  <img
+                    src={footerLogo}
+                    alt={Constants.STORE_NAME}
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
                   />
