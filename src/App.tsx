@@ -27,7 +27,6 @@ function cn(...inputs: ClassValue[]) {
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   const [serviceType, setServiceType] = useState(Constants.PRODUCT_TYPES[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -37,11 +36,10 @@ export default function App() {
     email: '',
     city: 'Darbhanga',
     address: '',
+    product_name: Constants.PRODUCT_NAME,
     notes: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const totalPrice = Constants.PRICE_PER_UNIT * quantity;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -72,9 +70,9 @@ export default function App() {
             city: formData.city,
             address: formData.address,
             country: Constants.DEFAULT_COUNTRY,
-            product_name: Constants.PRODUCT_NAME,
+            product_name: formData.product_name,
             product_variant: serviceType,
-            quantity: quantity,
+            quantity: 1,
             notes: formData.notes,
             status: 'pending',
             service_type: serviceType.toLowerCase(),
@@ -91,9 +89,9 @@ export default function App() {
         email: '',
         city: 'Darbhanga',
         address: '',
+        product_name: Constants.PRODUCT_NAME,
         notes: ''
       });
-      setQuantity(1);
     } catch (err) {
       console.error('Error submitting order:', err);
       setSubmitStatus('error');
@@ -264,10 +262,8 @@ export default function App() {
         {/* Order Form Section */}
         <section id="order-form" className="py-24 bg-white">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
-              <div className="grid grid-cols-1 lg:grid-cols-5">
-                {/* Form Side */}
-                <div className="lg:col-span-3 p-8 sm:p-12">
+              <div className="max-w-3xl mx-auto">
+                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden p-8 sm:p-12">
                   <h2 className="text-3xl font-bold text-slate-900 mb-2">Order Your Service</h2>
                   <p className="text-slate-500 mb-10">Fill in your details and pay after service.</p>
                   
@@ -316,6 +312,17 @@ export default function App() {
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
                       />
                       {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email}</p>}
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-slate-700 ml-1">Product Name *</label>
+                      <input 
+                        type="text"
+                        placeholder="e.g. Kent Grand+, Aquaguard..."
+                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                        value={formData.product_name}
+                        onChange={(e) => setFormData({...formData, product_name: e.target.value})}
+                      />
                     </div>
 
                     <div className="space-y-2">
@@ -407,70 +414,8 @@ export default function App() {
                     </AnimatePresence>
                   </form>
                 </div>
-
-                {/* Summary Side */}
-                <div className="lg:col-span-2 bg-slate-50 p-8 sm:p-12 border-l border-slate-100">
-                  <h3 className="text-xl font-bold text-slate-900 mb-8">Order Summary</h3>
-                  
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm font-semibold text-slate-700">
-                        <span>Selected Service</span>
-                        <span className="text-blue-600">{serviceType}</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-slate-200">
-                      <label className="text-sm font-semibold text-slate-700">Quantity</label>
-                      <div className="flex items-center gap-4">
-                        <button 
-                          type="button"
-                          onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                          className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-white transition-all"
-                        >
-                          -
-                        </button>
-                        <span className="text-lg font-bold text-slate-900 w-8 text-center">{quantity}</span>
-                        <button 
-                          type="button"
-                          onClick={() => setQuantity(quantity + 1)}
-                          className="w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-white transition-all"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pt-6 border-t border-slate-200 space-y-3">
-                      <div className="flex justify-between text-slate-600">
-                        <span>Price per unit</span>
-                        <span>{Constants.CURRENCY} {Constants.PRICE_PER_UNIT}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>Quantity</span>
-                        <span>x {quantity}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-600">
-                        <span>Delivery Fee</span>
-                        <span className="text-emerald-600 font-medium">FREE</span>
-                      </div>
-                      <div className="flex justify-between text-xl font-bold text-slate-900 pt-3">
-                        <span>Total</span>
-                        <span>{Constants.CURRENCY} {totalPrice}</span>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3">
-                      <ShieldCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
-                      <p className="text-xs text-blue-700 leading-relaxed">
-                        <strong>Protection:</strong> You only pay when our technician arrives and completes the service. No advance payment required.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
-          </div>
         </section>
 
         {/* FAQ Section */}
