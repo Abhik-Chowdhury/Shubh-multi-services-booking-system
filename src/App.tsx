@@ -131,7 +131,7 @@ export default function App() {
             </div>
 
             <nav className="hidden md:flex items-center gap-8">
-              <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">How COD Works</button>
+              <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">How Works</button>
               <button onClick={() => scrollToSection('benefits')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Benefits</button>
               <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">FAQ</button>
               <button 
@@ -241,7 +241,7 @@ export default function App() {
         <section id="how-it-works" className="py-24 bg-[#F9FAFB]">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">How Cash on Delivery Works</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">How Delivery Works</h2>
               <p className="text-slate-600">Simple, transparent, and risk-free ordering process.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative">
@@ -355,7 +355,7 @@ export default function App() {
                           Processing...
                         </>
                       ) : (
-                        'Confirm Order (Cash on Delivery)'
+                        'Confirm Order (Delivery)'
                       )}
                     </button>
 
@@ -456,7 +456,7 @@ export default function App() {
                     <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex items-start gap-3">
                       <ShieldCheck className="text-blue-600 shrink-0 mt-0.5" size={18} />
                       <p className="text-xs text-blue-700 leading-relaxed">
-                        <strong>COD Protection:</strong> You only pay when our technician arrives and completes the service. No advance payment required.
+                        <strong>Protection:</strong> You only pay when our technician arrives and completes the service. No advance payment required.
                       </p>
                     </div>
                   </div>
@@ -498,7 +498,7 @@ export default function App() {
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
                   <img 
-                    src="/input_file_0.png" 
+                    src="/src/shubh-v.2.png" 
                     alt={Constants.STORE_NAME} 
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
@@ -538,11 +538,11 @@ export default function App() {
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone size={18} className="shrink-0 text-blue-500" />
-                  <span>+91 98765 43210</span>
+                  <span>7033414666 | 7033415666</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail size={18} className="shrink-0 text-blue-500" />
-                  <span>contact@shubhmulti.com</span>
+                  <span>shubhservices.multi@gmail.com</span>
                 </li>
               </ul>
             </div>
