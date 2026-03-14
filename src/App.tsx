@@ -119,7 +119,7 @@ export default function App() {
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
                 <img 
-                  src="/src/shubh-transparent-logo.png" 
+                  src="./shubh-transparent-logo.png" 
                   alt={Constants.STORE_NAME} 
                   className="w-full h-full object-contain"
                   referrerPolicy="no-referrer"
@@ -505,7 +505,7 @@ export default function App() {
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-10 h-10 flex items-center justify-center overflow-hidden">
                   <img 
-                    src="/src/shubh-v.2.png" 
+                    src="./shubh-v.2.png" 
                     alt={Constants.STORE_NAME} 
                     className="w-full h-full object-contain"
                     referrerPolicy="no-referrer"
