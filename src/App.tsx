@@ -541,11 +541,11 @@ export default function App() {
               <ul className="space-y-4 text-slate-400">
                 <li className="flex items-start gap-3">
                   <MapPin size={18} className="shrink-0 text-blue-500" />
-                  <span>{Constants.STORE_LOCATION}, Bihar, India</span>
+                  <span>{Constants.STORE_LOCATION}, India</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone size={18} className="shrink-0 text-blue-500" />
-                  <span>7033414666 | 7033415666</span>
+                  <span>7033414666/7033415666</span>
                 </li>
                 <li className="flex items-center gap-3">
                   <Mail size={18} className="shrink-0 text-blue-500" />
