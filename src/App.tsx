@@ -59,44 +59,72 @@ export default function App() {
     setIsSubmitting(true);
     setSubmitStatus('idle');
 
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .insert([
-          {
-            customer_name: formData.customer_name,
-            phone: formData.phone,
-            email: formData.email,
-            city: formData.city,
-            address: formData.address,
-            country: Constants.DEFAULT_COUNTRY,
-            product_name: formData.product_name,
-            product_variant: serviceType,
-            quantity: 1,
-            notes: formData.notes,
-            status: 'pending',
-            service_type: serviceType.toLowerCase(),
-            payment_type: 'cash'
-          }
-        ]);
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = String(now.getFullYear()).slice(-2);
+    const datePrefix = `${month}${day}${year}`;
 
-      if (error) throw error;
-      
-      setSubmitStatus('success');
-      setFormData({
-        customer_name: '',
-        phone: '',
-        email: '',
-        city: 'Darbhanga',
-        address: '',
-        product_name: Constants.PRODUCT_NAME,
-        notes: ''
-      });
-    } catch (err) {
-      console.error('Error submitting order:', err);
-      setSubmitStatus('error');
-    } finally {
-      setIsSubmitting(false);
+    let attempts = 0;
+    const maxAttempts = 3;
+    let success = false;
+
+    while (attempts < maxAttempts && !success) {
+      try {
+        // Generate a 10-digit serial number: MMDDYY + 4 random digits
+        // Using 4 random digits (10,000 combinations) + Auto-Retry makes collisions virtually impossible
+        const randomSuffix = Math.floor(Math.random() * 9000 + 1000).toString();
+        const serialNumber = `${datePrefix}${randomSuffix}`;
+        
+        const { error } = await supabase
+          .from('orders')
+          .insert([
+            {
+              customer_name: formData.customer_name,
+              phone: formData.phone,
+              email: formData.email,
+              city: formData.city,
+              address: formData.address,
+              country: Constants.DEFAULT_COUNTRY,
+              product_name: formData.product_name,
+              product_variant: serviceType,
+              serial_number: serialNumber,
+              notes: formData.notes,
+              status: 'pending',
+              service_type: serviceType.toLowerCase(),
+              payment_type: 'cash'
+            }
+          ]);
+
+        if (error) {
+          // If it's a duplicate key error (23505), try again with a new number
+          if (error.code === '23505' && attempts < maxAttempts - 1) {
+            attempts++;
+            continue;
+          }
+          throw error;
+        }
+
+        success = true;
+        setSubmitStatus('success');
+        setFormData({
+          customer_name: '',
+          phone: '',
+          email: '',
+          city: 'Darbhanga',
+          address: '',
+          product_name: Constants.PRODUCT_NAME,
+          notes: ''
+        });
+      } catch (err) {
+        console.error('Error submitting order:', err);
+        setSubmitStatus('error');
+        break;
+      } finally {
+        if (success || attempts >= maxAttempts - 1) {
+          setIsSubmitting(false);
+        }
+      }
     }
   };
 
