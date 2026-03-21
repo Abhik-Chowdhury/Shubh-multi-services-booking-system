@@ -90,7 +90,7 @@ export default function App() {
               product_variant: serviceType,
               serial_number: serialNumber,
               notes: formData.notes,
-              status: 'pending',
+              status: 'Pending',
               service_type: serviceType.toLowerCase(),
               payment_type: 'cash'
             }
