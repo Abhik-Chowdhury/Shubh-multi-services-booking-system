@@ -12,13 +12,17 @@ import {
   MapPin,
   Menu,
   X,
-  Droplets
+  Droplets,
+  User,
+  LogOut,
+  Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { supabase } from './supabase';
 import * as Constants from './constants';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 // Utility for tailwind classes
 function cn(...inputs: ClassValue[]) {
@@ -27,9 +31,22 @@ function cn(...inputs: ClassValue[]) {
 
 export default function App() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [serviceType, setServiceType] = useState(Constants.PRODUCT_TYPES[0]);
+  const [serviceType, setServiceType] = useState<string>(Constants.SERVICE_TYPES[2]);
+  const [productVariant, setProductVariant] = useState<string>(Constants.PRODUCT_VARIANTS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const isAdmin = profile?.role === 'admin' || user?.email === 'abhikc96@gmail.com';
+  const isAuthorized = !!user;
+
   const [formData, setFormData] = useState({
     customer_name: '',
     phone: '',
@@ -40,6 +57,84 @@ export default function App() {
     notes: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchProfile(session.user.id);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (!error && data) {
+      setProfile(data);
+    }
+  };
+
+  const handleAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      if (authMode === 'signup') {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+        
+        // Create profile if signup successful
+        if (data.user) {
+          await supabase.from('profiles').insert([
+            { 
+              id: data.user.id, 
+              email: data.user.email, 
+              full_name: formData.customer_name || 'New User',
+              role: 'user' // Default role
+            }
+          ]);
+        }
+        setSubmitStatus('success');
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+      }
+      setIsAuthModalOpen(false);
+      setAuthEmail('');
+      setAuthPassword('');
+    } catch (err: any) {
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -87,11 +182,11 @@ export default function App() {
               address: formData.address,
               country: Constants.DEFAULT_COUNTRY,
               product_name: formData.product_name,
-              product_variant: serviceType,
+              product_variant: productVariant,
               serial_number: serialNumber,
               notes: formData.notes,
               status: 'Pending',
-              service_type: serviceType.toLowerCase(),
+              service_type: serviceType,
               payment_type: 'cash'
             }
           ]);
@@ -160,12 +255,39 @@ export default function App() {
               <button onClick={() => scrollToSection('how-it-works')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">How Works</button>
               <button onClick={() => scrollToSection('benefits')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Benefits</button>
               <button onClick={() => scrollToSection('faq')} className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">FAQ</button>
-              <button 
-                onClick={() => scrollToSection('order-form')}
-                className="bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
-              >
-                Order Now
-              </button>
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full">
+                    <User size={16} className={cn("text-slate-600", isAdmin && "text-blue-600")} />
+                    <span className="text-xs font-medium text-slate-700 truncate max-w-[100px]">
+                      {user.email} {isAdmin && "(Admin)"}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-2 text-slate-600 hover:text-red-600 transition-colors"
+                    title="Logout"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                </div>
+              ) : (
+                <button 
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1.5"
+                >
+                  <Lock size={16} />
+                  Login to Order
+                </button>
+              )}
+              {isAuthorized && (
+                <button 
+                  onClick={() => scrollToSection('order-form')}
+                  className="bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                >
+                  Order Now
+                </button>
+              )}
             </nav>
 
             <button className="md:hidden p-2 text-slate-600" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -219,12 +341,21 @@ export default function App() {
                 {Constants.PRODUCT_DESCRIPTION}
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button 
-                  onClick={() => scrollToSection('order-form')}
-                  className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all hover:shadow-xl hover:shadow-blue-200 active:scale-95"
-                >
-                  Book Service Now
-                </button>
+                {isAuthorized ? (
+                  <button 
+                    onClick={() => scrollToSection('order-form')}
+                    className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all hover:shadow-xl hover:shadow-blue-200 active:scale-95"
+                  >
+                    Book Service Now
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className="w-full sm:w-auto bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all hover:shadow-xl hover:shadow-blue-200 active:scale-95"
+                  >
+                    Login to Book
+                  </button>
+                )}
                 <button 
                   onClick={() => scrollToSection('how-it-works')}
                   className="w-full sm:w-auto bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-slate-50 transition-all active:scale-95"
@@ -288,163 +419,203 @@ export default function App() {
         </section>
 
         {/* Order Form Section */}
-        <section id="order-form" className="py-24 bg-white">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="max-w-3xl mx-auto">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden p-8 sm:p-12">
-                  <h2 className="text-3xl font-bold text-slate-900 mb-2">Order Your Service</h2>
-                  <p className="text-slate-500 mb-10">Fill in your details and pay after service.</p>
-                  
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {isAuthorized ? (
+          <section id="order-form" className="py-24 bg-white">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="max-w-3xl mx-auto">
+                  <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden p-8 sm:p-12">
+                    <h2 className="text-3xl font-bold text-slate-900 mb-2">Order Your Service</h2>
+                    <p className="text-slate-500 mb-10">Fill in your details and pay after service.</p>
+                    
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">Full Name *</label>
+                          <input 
+                            type="text"
+                            placeholder="Your Name"
+                            className={cn(
+                              "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
+                              errors.customer_name && "border-red-500 ring-2 ring-red-500/10"
+                            )}
+                            value={formData.customer_name}
+                            onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
+                          />
+                          {errors.customer_name && <p className="text-xs text-red-500 ml-1">{errors.customer_name}</p>}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-slate-700 ml-1">Phone Number *</label>
+                          <input 
+                            type="tel"
+                            placeholder="Mobile Number"
+                            className={cn(
+                              "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
+                              errors.phone && "border-red-500 ring-2 ring-red-500/10"
+                            )}
+                            value={formData.phone}
+                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          />
+                          {errors.phone && <p className="text-xs text-red-500 ml-1">{errors.phone}</p>}
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700 ml-1">Full Name *</label>
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Email Address (Optional)</label>
+                        <input 
+                          type="email"
+                          placeholder="email@example.com"
+                          className={cn(
+                            "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
+                            errors.email && "border-red-500 ring-2 ring-red-500/10"
+                          )}
+                          value={formData.email}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                        {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Product Name *</label>
                         <input 
                           type="text"
-                          placeholder="Your Name"
-                          className={cn(
-                            "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                            errors.customer_name && "border-red-500 ring-2 ring-red-500/10"
-                          )}
-                          value={formData.customer_name}
-                          onChange={(e) => setFormData({...formData, customer_name: e.target.value})}
+                          placeholder="e.g. Kent Grand+, Aquaguard..."
+                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          value={formData.product_name}
+                          onChange={(e) => setFormData({...formData, product_name: e.target.value})}
                         />
-                        {errors.customer_name && <p className="text-xs text-red-500 ml-1">{errors.customer_name}</p>}
                       </div>
+
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700 ml-1">Phone Number *</label>
-                        <input 
-                          type="tel"
-                          placeholder="Mobile Number"
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Product Variant *</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {Constants.PRODUCT_VARIANTS.map((variant) => (
+                            <button
+                              key={variant}
+                              type="button"
+                              onClick={() => setProductVariant(variant)}
+                              className={cn(
+                                "px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all text-center flex items-center justify-center gap-1",
+                                productVariant === variant 
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100" 
+                                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                              )}
+                            >
+                              {variant}
+                              {productVariant === variant && <CheckCircle2 size={14} />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Service Type *</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {Constants.SERVICE_TYPES.map((type) => (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setServiceType(type)}
+                              className={cn(
+                                "px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all text-center flex items-center justify-center gap-1",
+                                serviceType === type 
+                                  ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100" 
+                                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
+                              )}
+                            >
+                              {type}
+                              {serviceType === type && <CheckCircle2 size={14} />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Address *</label>
+                        <textarea 
+                          placeholder="House No, Street, Landmark..."
+                          rows={3}
                           className={cn(
-                            "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                            errors.phone && "border-red-500 ring-2 ring-red-500/10"
+                            "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none",
+                            errors.address && "border-red-500 ring-2 ring-red-500/10"
                           )}
-                          value={formData.phone}
-                          onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                          value={formData.address}
+                          onChange={(e) => setFormData({...formData, address: e.target.value})}
                         />
-                        {errors.phone && <p className="text-xs text-red-500 ml-1">{errors.phone}</p>}
+                        {errors.address && <p className="text-xs text-red-500 ml-1">{errors.address}</p>}
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 ml-1">Email Address (Optional)</label>
-                      <input 
-                        type="email"
-                        placeholder="email@example.com"
-                        className={cn(
-                          "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                          errors.email && "border-red-500 ring-2 ring-red-500/10"
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 ml-1">Additional Notes</label>
+                        <input 
+                          type="text"
+                          placeholder="Any specific instructions..."
+                          className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                          value={formData.notes}
+                          onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        />
+                      </div>
+
+                      <button 
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="animate-spin" size={20} />
+                            Processing...
+                          </>
+                        ) : (
+                          `Confirm Order (${serviceType})`
                         )}
-                        value={formData.email}
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      />
-                      {errors.email && <p className="text-xs text-red-500 ml-1">{errors.email}</p>}
-                    </div>
+                      </button>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 ml-1">Product Name *</label>
-                      <input 
-                        type="text"
-                        placeholder="e.g. Kent Grand+, Aquaguard..."
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        value={formData.product_name}
-                        onChange={(e) => setFormData({...formData, product_name: e.target.value})}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 ml-1">Select Service Type *</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {Constants.PRODUCT_TYPES.map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => setServiceType(type)}
-                            className={cn(
-                              "px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium border transition-all text-center flex items-center justify-center gap-1",
-                              serviceType === type 
-                                ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100" 
-                                : "bg-white border-slate-200 text-slate-600 hover:border-blue-300"
-                            )}
+                      <AnimatePresence>
+                        {submitStatus === 'success' && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-700"
                           >
-                            {type}
-                            {serviceType === type && <CheckCircle2 size={14} />}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 ml-1">Address *</label>
-                      <textarea 
-                        placeholder="House No, Street, Landmark..."
-                        rows={3}
-                        className={cn(
-                          "w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none",
-                          errors.address && "border-red-500 ring-2 ring-red-500/10"
+                            <CheckCircle2 size={20} />
+                            <span className="text-sm font-medium">Order placed successfully! We'll call you soon.</span>
+                          </motion.div>
                         )}
-                        value={formData.address}
-                        onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      />
-                      {errors.address && <p className="text-xs text-red-500 ml-1">{errors.address}</p>}
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-semibold text-slate-700 ml-1">Additional Notes</label>
-                      <input 
-                        type="text"
-                        placeholder="Any specific instructions..."
-                        className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-                        value={formData.notes}
-                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                      />
-                    </div>
-
-                    <button 
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="animate-spin" size={20} />
-                          Processing...
-                        </>
-                      ) : (
-                        `Confirm Order (${serviceType})`
-                      )}
-                    </button>
-
-                    <AnimatePresence>
-                      {submitStatus === 'success' && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 text-emerald-700"
-                        >
-                          <CheckCircle2 size={20} />
-                          <span className="text-sm font-medium">Order placed successfully! We'll call you soon.</span>
-                        </motion.div>
-                      )}
-                      {submitStatus === 'error' && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700"
-                        >
-                          <AlertCircle size={20} />
-                          <span className="text-sm font-medium">Something went wrong. Please try again.</span>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </form>
+                        {submitStatus === 'error' && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700"
+                          >
+                            <AlertCircle size={20} />
+                            <span className="text-sm font-medium">Something went wrong. Please try again.</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </form>
+                  </div>
                 </div>
               </div>
+          </section>
+        ) : (
+          <section id="order-form" className="py-24 bg-white">
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <div className="p-12 rounded-[2.5rem] bg-slate-50 border border-dashed border-slate-300">
+                <Lock size={48} className="mx-auto text-slate-300 mb-6" />
+                <h2 className="text-2xl font-bold text-slate-900 mb-4">Login Required</h2>
+                <p className="text-slate-600 mb-8">The booking form is only accessible to logged-in users. Please log in to continue.</p>
+                <button 
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all"
+                >
+                  Login to Book
+                </button>
+              </div>
             </div>
-        </section>
+          </section>
+        )}
 
         {/* FAQ Section */}
         <section id="faq" className="py-24 bg-[#F9FAFB]">
@@ -537,6 +708,87 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AnimatePresence>
+        {isAuthModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAuthModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-slate-900">
+                    {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+                  </h3>
+                  <button onClick={() => setIsAuthModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600">
+                    <X size={20} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleAuth} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700 ml-1">Email Address</label>
+                    <input 
+                      type="email"
+                      required
+                      placeholder="email@example.com"
+                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700 ml-1">Password</label>
+                    <input 
+                      type="password"
+                      required
+                      placeholder="••••••••"
+                      className="w-full px-5 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                    />
+                  </div>
+
+                  {authError && (
+                    <div className="p-3 bg-red-50 border border-red-100 rounded-xl text-xs text-red-600 flex items-center gap-2">
+                      <AlertCircle size={14} />
+                      {authError}
+                    </div>
+                  )}
+
+                  <button 
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-100 disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    {authLoading ? <Loader2 className="animate-spin" size={20} /> : (authMode === 'login' ? 'Login' : 'Sign Up')}
+                  </button>
+                </form>
+
+                <div className="mt-6 text-center">
+                  <button 
+                    onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                    className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    {authMode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Login"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

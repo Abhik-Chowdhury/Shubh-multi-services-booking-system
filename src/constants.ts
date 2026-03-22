@@ -10,12 +10,19 @@ export const PRODUCT_DESCRIPTION = "Expert RO servicing, AMC, and new installati
 export const PRICE_PER_UNIT = 499; // Changed from 49 to 499 as 49 is too low for RO service in INR
 export const CURRENCY = "INR";
 
-export const PRODUCT_TYPES = [
+export const SERVICE_TYPES = [
+  "Installation", 
+  "Re-installation", 
   "Service", 
   "WAMC", 
-  "AMC", 
-  "NEW-RO", 
-  "NEW-PURIFIRE"
+  "AMC"
+] as const;
+
+export const PRODUCT_VARIANTS = [
+  "Old-Ro",
+  "Old-Purifre",
+  "New-RO",
+  "New-Purifre"
 ] as const;
 
 export const DEFAULT_COUNTRY = "INDIA";
